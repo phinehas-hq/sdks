@@ -94,71 +94,640 @@ Every SDK package in this monorepo is tested against the shared compliance suite
 
 ---
 
-## 3. Quickstart Examples
+## 3. Comprehensive Framework Examples & Option Guides
 
-### Node.js (Express)
+Below are full, production-ready examples for every supported framework. Each code example explicitly distinguishes **`[REQUIRED]`** setup from **`[OPTIONAL]`** tuning parameters and **`[PRODUCTION RECOMMENDED]`** cluster settings.
+
+---
+
+### A. Node.js & TypeScript
+
+#### 1. Express / Connect / Fastify (`@phinehas/node`)
+
+Install using **Yarn**:
+```bash
+yarn add @phinehas/node @phinehas/core
+# Optional Redis cluster support:
+yarn add ioredis
+```
+
 ```typescript
 import express from 'express';
-import { phinehas } from '@phinehas/node';
+import { phinehas, RedisStore, MemoryStore } from '@phinehas/node';
+import Redis from 'ioredis';
 
 const app = express();
 
-// Register Phinehas before all route handlers
-app.use(phinehas({
-  action: 'sever',             // Immediately destroy attacker TCP sockets
-  banThreshold: 3,             // Ban after 3 malicious reconnaissance attempts
-  banDurationSeconds: 86400,   // 24-hour ban duration
-}));
+// =========================================================================
+// PRODUCTION CONFIGURATION (Explicit Required vs Optional Showcase)
+// =========================================================================
+app.use(
+  phinehas({
+    // [OPTIONAL - DEFAULT: "sever"]
+    // Enforcement action on detection:
+    // - "sever":  Destroys underlying TCP socket immediately (ECONNRESET)
+    // - "drop":   Returns HTTP 403 Forbidden with zero response body bytes
+    // - "tarpit": Holds attacker socket open for `tarpitDelayMs` to starve crawler
+    action: 'sever',
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
-app.listen(3000);
+    // [OPTIONAL - DEFAULT: 3]
+    // Number of malicious reconnaissance attempts before an IP is banned
+    banThreshold: 3,
+
+    // [OPTIONAL - DEFAULT: 86400 (24 hours)]
+    // Ban duration in seconds. Set to 0 for a permanent ban.
+    banDurationSeconds: 86400,
+
+    // [OPTIONAL - DEFAULT: 60]
+    // Rolling time window in seconds during which strikes accumulate
+    strikeWindowSeconds: 60,
+
+    // [PRODUCTION RECOMMENDED - DEFAULT: false]
+    // Set to true when running behind Cloudflare, AWS ALB, Nginx, or Fastly.
+    // Inspects CF-Connecting-IP, True-Client-IP, and X-Forwarded-For securely.
+    trustProxy: true,
+
+    // [OPTIONAL - DEFAULT: 1]
+    // Number of reverse proxy hops to traverse in X-Forwarded-For header
+    proxyDepth: 1,
+
+    // [OPTIONAL - DEFAULT: []]
+    // Additional application-specific honeypot routes or proprietary traps
+    customTraps: [
+      /^\/internal-admin(\/.*)?$/,
+      /^\/api\/v\d+\/debug-console$/,
+      '/super-secret-backdoor',
+    ],
+
+    // [OPTIONAL - DEFAULT: false]
+    // If true, disables the built-in trap list (e.g. CMS, DB dumps, debuggers)
+    // and evaluates ONLY customTraps + RFC 8615 dotfiles
+    excludeDefaultTraps: false,
+
+    // [OPTIONAL - DEFAULT: []]
+    // Subnets (CIDR) or specific paths that are unconditionally allowed
+    whitelist: [
+      '127.0.0.1',
+      '10.0.0.0/8',
+      '/.well-known/custom-enterprise-verification',
+    ],
+
+    // [PRODUCTION RECOMMENDED FOR MULTI-SERVER CLUSTERS - DEFAULT: MemoryStore]
+    // Synchronize bans across horizontal instances via Redis, backed by an
+    // in-process L1 shield cache to preserve sub-15 microsecond latency:
+    store: new RedisStore({
+      client: new Redis(process.env.REDIS_URL || 'redis://localhost:6379'),
+      prefix: 'phinehas:ban:',
+      l1CacheTtlMs: 5000, // 5-second in-memory L1 shield preventing Redis query flood
+    }),
+
+    // [OPTIONAL - DEFAULT: 5000]
+    // Milliseconds to hold the socket open when `action: "tarpit"` is active
+    tarpitDelayMs: 5000,
+
+    // [OPTIONAL - DEFAULT: built-in structured JSON logger]
+    // Custom event callback for metrics pipelines (Datadog, OpenTelemetry, Prometheus)
+    onStrike: (strikeEvent) => {
+      console.warn(`[SECURITY ALERT] Strike recorded for IP ${strikeEvent.actor.ip}:`, {
+        rule: strikeEvent.verdict.ruleMatched,
+        path: strikeEvent.target.path,
+        action: strikeEvent.verdict.actionTaken,
+      });
+    },
+  })
+);
+
+// [REQUIRED] Normal application business routes continue below
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));
 ```
 
-### Python (FastAPI / Starlette)
+---
+
+#### 2. Next.js Edge & Server Guard (`@phinehas/next`)
+
+In Next.js Edge Middleware (V8 Isolates), raw OS TCP sockets cannot be forcefully severed. `@phinehas/next` provides `createPhinehasEdgeGuard()`, returning zero-byte `403 Forbidden` responses before React Server Components or Edge API routes render.
+
+Install using **Yarn**:
+```bash
+yarn add @phinehas/next @phinehas/core
+```
+
+```typescript
+// middleware.ts (in your Next.js project root or src/)
+import { NextRequest } from 'next/server';
+import { createPhinehasEdgeGuard } from '@phinehas/next';
+
+// =========================================================================
+// INITIALIZE EDGE GUARD (Required vs Optional)
+// =========================================================================
+const phinehasGuard = createPhinehasEdgeGuard({
+  // [OPTIONAL - DEFAULT: "drop"]
+  // In V8 edge isolates, "drop" immediately returns a zero-byte 403 Forbidden
+  action: 'drop',
+
+  // [OPTIONAL - DEFAULT: 3]
+  banThreshold: 3,
+
+  // [OPTIONAL - DEFAULT: 86400]
+  banDurationSeconds: 86400,
+
+  // [PRODUCTION RECOMMENDED - DEFAULT: true on Next.js]
+  // Automatically inspects Vercel/Cloudflare headers: req.ip, x-real-ip
+  trustProxy: true,
+
+  // [OPTIONAL - DEFAULT: []]
+  // Protect your Next.js internal routes from probing
+  customTraps: ['/_next/data/staging-secrets.json', '/api/debug/dump'],
+
+  // [OPTIONAL - DEFAULT: []]
+  whitelist: ['/.well-known/apple-developer-merchantid-domain-association'],
+});
+
+// [REQUIRED] Export Next.js middleware handler
+export async function middleware(request: NextRequest) {
+  return await phinehasGuard(request);
+}
+
+// [PRODUCTION RECOMMENDED] Match all paths except static assets & images
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+};
+```
+
+---
+
+#### 3. NestJS Enterprise Module (`@phinehas/nestjs`)
+
+Install using **Yarn**:
+```bash
+yarn add @phinehas/nestjs @phinehas/node @phinehas/core
+```
+
+```typescript
+// app.module.ts
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { PhinehasModule, PhinehasMiddleware } from '@phinehas/nestjs';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+
+    // =========================================================================
+    // OPTION 1: STATIC REGISTRATION (PhinehasModule.forRoot)
+    // =========================================================================
+    PhinehasModule.forRoot({
+      action: 'sever',             // [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+      banThreshold: 3,             // [OPTIONAL] Strikes before IP ban
+      banDurationSeconds: 86400,   // [OPTIONAL] 24-hour ban
+      trustProxy: true,            // [PRODUCTION RECOMMENDED]
+    }),
+
+    // =========================================================================
+    // OPTION 2: ASYNC REGISTRATION (PhinehasModule.forRootAsync with ConfigService)
+    // =========================================================================
+    /*
+    PhinehasModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        action: config.get('PHINEHAS_ACTION', 'sever'),
+        banThreshold: config.get<number>('PHINEHAS_BAN_THRESHOLD', 3),
+        trustProxy: config.get<boolean>('TRUST_PROXY', true),
+      }),
+    }),
+    */
+  ],
+})
+export class AppModule implements NestModule {
+  // [REQUIRED] Apply the Phinehas middleware globally across all routes
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(PhinehasMiddleware).forRoutes('*');
+  }
+}
+```
+
+---
+
+### B. Python
+
+Install using **`uv`**:
+```bash
+uv add phinehas
+# Or install with framework-specific extras:
+uv add "phinehas[fastapi]"
+uv add "phinehas[django]"
+uv add "phinehas[flask]"
+uv add "phinehas[redis]"
+```
+
+---
+
+#### 1. FastAPI / Starlette (ASGI)
+
 ```python
+import os
 from fastapi import FastAPI
 from phinehas.fastapi import PhinehasMiddleware
+from phinehas.store import RedisStore, MemoryStore
+import redis
 
-app = FastAPI()
+app = FastAPI(title="Production Service")
 
+# =========================================================================
+# PRODUCTION ASGI MIDDLEWARE REGISTRATION
+# =========================================================================
 app.add_middleware(
     PhinehasMiddleware,
-    action="sever",              # Drops ASGI socket instantly
+    # [OPTIONAL - DEFAULT: "sever"]
+    # "sever":  Immediately terminates the ASGI transport socket
+    # "drop":   Returns HTTP 403 Forbidden with empty response body
+    # "tarpit": Delays the response before dropping to exhaust crawlers
+    action="sever",
+
+    # [OPTIONAL - DEFAULT: 3]
+    # Number of strike events before the client IP is banned
     ban_threshold=3,
+
+    # [OPTIONAL - DEFAULT: 86400]
+    # Ban duration in seconds (86400 = 24 hours, 0 = permanent)
     ban_duration_seconds=86400,
+
+    # [OPTIONAL - DEFAULT: 60]
+    # Rolling window in seconds for strike accumulation
+    strike_window_seconds=60,
+
+    # [PRODUCTION RECOMMENDED - DEFAULT: False]
+    # Set to True when deployed behind Cloudflare, Nginx, or AWS ALB
+    trust_proxy=True,
+
+    # [OPTIONAL - DEFAULT: 1]
+    # Proxy hops in X-Forwarded-For
+    proxy_depth=1,
+
+    # [OPTIONAL - DEFAULT: []]
+    # Custom application-specific threat regex patterns or exact paths
+    custom_traps=[
+        r"^/api/internal/.*",
+        r"^/debug/metrics-dump$",
+        "/phpmyadmin",
+    ],
+
+    # [OPTIONAL - DEFAULT: []]
+    # Unconditionally allowed IP addresses, CIDR blocks, or URIs
+    whitelist=[
+        "127.0.0.1",
+        "10.0.0.0/8",
+        "/.well-known/security.txt",
+    ],
+
+    # [PRODUCTION RECOMMENDED FOR MULTI-WORKER DEPLOYMENTS - DEFAULT: MemoryStore()]
+    # Distributed Redis store with local 5-second L1 cache:
+    store=RedisStore(
+        redis_client=redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0")),
+        prefix="phinehas:ban:",
+        l1_cache_ttl_seconds=5,
+    ),
+
+    # [OPTIONAL - DEFAULT: 5000]
+    # Delay in milliseconds when action="tarpit"
+    tarpit_delay_ms=5000,
 )
 
+# [REQUIRED] Application business routes
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}
 ```
 
-### Golang (`net/http`)
+---
+
+#### 2. Django (WSGI & ASGI)
+
+```python
+# settings.py
+import os
+
+# [REQUIRED] Prepend PhinehasMiddleware at the VERY TOP of your middleware pipeline
+MIDDLEWARE = [
+    'phinehas.django.PhinehasMiddleware',  # MUST execute before all other middlewares
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    # ...
+]
+
+# =========================================================================
+# PHINEHAS CONFIGURATION DICTIONARY (Required vs Optional)
+# =========================================================================
+PHINEHAS = {
+    # [OPTIONAL - DEFAULT: 'sever']
+    'ACTION': 'sever',
+
+    # [OPTIONAL - DEFAULT: 3]
+    'BAN_THRESHOLD': 3,
+
+    # [OPTIONAL - DEFAULT: 86400]
+    'BAN_DURATION_SECONDS': 86400,
+
+    # [OPTIONAL - DEFAULT: 60]
+    'STRIKE_WINDOW_SECONDS': 60,
+
+    # [PRODUCTION RECOMMENDED - DEFAULT: False]
+    # Set to True when behind Nginx or AWS Load Balancer
+    'TRUST_PROXY': True,
+    'PROXY_DEPTH': 1,
+
+    # [OPTIONAL - DEFAULT: []]
+    'CUSTOM_TRAPS': [
+        r'^/private-admin/',
+        r'^/debug/vars',
+    ],
+
+    # [OPTIONAL - DEFAULT: []]
+    'WHITELIST': [
+        '127.0.0.1',
+        '/.well-known/acme-challenge/',
+    ],
+
+    # [PRODUCTION RECOMMENDED - DEFAULT: None (uses in-memory OrderedDict LRU)]
+    # Connect to your Redis cluster for global ban synchronization
+    'REDIS_URL': os.getenv('REDIS_URL', 'redis://localhost:6379/1'),
+    'REDIS_PREFIX': 'phinehas:django:ban:',
+
+    # [OPTIONAL - DEFAULT: 5000]
+    'TARPIT_DELAY_MS': 5000,
+}
+```
+
+---
+
+#### 3. Flask Extension
+
+```python
+import os
+from flask import Flask, jsonify
+from phinehas.flask import Phinehas
+
+app = Flask(__name__)
+
+# =========================================================================
+# FLASK CONFIGURATION (Can be loaded from config object or environment)
+# =========================================================================
+app.config.update(
+    PHINEHAS_ACTION="sever",             # [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+    PHINEHAS_BAN_THRESHOLD=3,            # [OPTIONAL] Strikes before IP ban
+    PHINEHAS_BAN_DURATION_SECONDS=86400, # [OPTIONAL] 24-hour ban
+    PHINEHAS_TRUST_PROXY=True,           # [PRODUCTION RECOMMENDED]
+    PHINEHAS_CUSTOM_TRAPS=[              # [OPTIONAL]
+        r"^/flask-admin/.*",
+        "/internal/status",
+    ],
+    PHINEHAS_REDIS_URL=os.getenv("REDIS_URL"), # [PRODUCTION RECOMMENDED]
+)
+
+# [REQUIRED] Initialize the Phinehas extension
+phinehas_guard = Phinehas(app)
+# Or use application factory pattern:
+# phinehas_guard = Phinehas()
+# phinehas_guard.init_app(app)
+
+@app.route("/api/health")
+def health():
+    return jsonify({"status": "ok"})
+```
+
+---
+
+#### 4. Universal WSGI Middleware (Gunicorn / uWSGI)
+
+```python
+# wsgi.py (Universal WSGI wrapper for Gunicorn, uWSGI, Falcon, Bottle)
+from my_application import app  # Any standard WSGI callable
+from phinehas.wsgi import PhinehasWSGIMiddleware
+
+# [REQUIRED] Wrap your application
+application = PhinehasWSGIMiddleware(
+    app,
+    action="sever",              # [OPTIONAL - DEFAULT: 'sever']
+    ban_threshold=3,             # [OPTIONAL - DEFAULT: 3]
+    ban_duration_seconds=86400,  # [OPTIONAL - DEFAULT: 86400]
+    trust_proxy=True,            # [PRODUCTION RECOMMENDED]
+    custom_traps=[r"^/wp-login\.php$"], # [OPTIONAL]
+)
+```
+
+Run with Gunicorn:
+```bash
+gunicorn -w 4 -b 0.0.0.0:8000 wsgi:application
+```
+
+---
+
+### C. Golang
+
+Install using **`go get`**:
+```bash
+go get github.com/phinehas-hq/sdks/packages/go
+```
+
+---
+
+#### 1. Standard Library `net/http`
+
 ```go
 package main
 
 import (
+	"log"
 	"net/http"
+	"regexp"
+	"time"
+
 	"github.com/phinehas-hq/sdks/packages/go"
 )
 
 func main() {
-	guard := phinehas.New(phinehas.Config{
-		Action:             phinehas.ActionSever, // Hijacks and severs TCP connection
-		BanThreshold:       3,
-		BanDurationSeconds: 86400,
-	})
+	// =====================================================================
+	// PHINEHAS CONFIGURATION (Required vs Optional)
+	// =====================================================================
+	cfg := phinehas.Config{
+		// [OPTIONAL - DEFAULT: ActionSever]
+		// ActionSever:  Hijacks connection via http.Hijacker and closes TCP socket
+		// ActionDrop:   Returns HTTP 403 Forbidden with empty body
+		// ActionTarpit: Sleeps for TarpitDelayMs before severing socket
+		Action: phinehas.ActionSever,
 
+		// [OPTIONAL - DEFAULT: 3]
+		// Strikes before client IP is banned
+		BanThreshold: 3,
+
+		// [OPTIONAL - DEFAULT: 86400]
+		// Ban duration in seconds (86400 = 24h, 0 = permanent)
+		BanDurationSeconds: 86400,
+
+		// [OPTIONAL - DEFAULT: 60]
+		// Rolling time window in seconds for strike accumulation
+		StrikeWindowSeconds: 60,
+
+		// [PRODUCTION RECOMMENDED - DEFAULT: false]
+		// Enables CF-Connecting-IP, True-Client-IP, and X-Forwarded-For parsing
+		TrustProxy: true,
+
+		// [OPTIONAL - DEFAULT: 1]
+		// Number of proxy hops to parse in X-Forwarded-For
+		ProxyDepth: 1,
+
+		// [OPTIONAL - DEFAULT: empty]
+		// Additional compiled regex patterns or exact path traps
+		CustomTraps: []*regexp.Regexp{
+			regexp.MustCompile(`^/internal/system-info$`),
+			regexp.MustCompile(`^/debug/pprof/.*`),
+		},
+
+		// [OPTIONAL - DEFAULT: empty]
+		// Paths or CIDR blocks unconditionally allowed
+		Whitelist: []string{
+			"127.0.0.1",
+			"/.well-known/matrix/server",
+		},
+
+		// [OPTIONAL - DEFAULT: 5000]
+		// Milliseconds to delay connection when Action == ActionTarpit
+		TarpitDelayMs: 5000,
+	}
+
+	// [REQUIRED] Initialize Guard
+	guard := phinehas.New(cfg)
+
+	// [REQUIRED] Standard HTTP multiplexer
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"status":"ok"}`))
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"healthy"}`))
 	})
 
-	http.ListenAndServe(":8080", guard.Wrap(mux))
+	server := &http.Server{
+		Addr:         ":8080",
+		Handler:      guard.Wrap(mux), // [REQUIRED] Wrap router with Guard
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	log.Println("Listening on :8080 with Phinehas active defense...")
+	log.Fatal(server.ListenAndServe())
 }
 ```
 
-### PHP (Laravel 11)
+---
+
+#### 2. Gin, Chi, and Echo Frameworks
+
+```go
+// -------------------------------------------------------------------------
+// GIN FRAMEWORK
+// -------------------------------------------------------------------------
+r := gin.Default()
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+
+r.Use(func(c *gin.Context) {
+    guard.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+        c.Next()
+    })).ServeHTTP(c.Writer, c.Request)
+})
+
+// -------------------------------------------------------------------------
+// CHI ROUTER
+// -------------------------------------------------------------------------
+r := chi.NewRouter()
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+
+r.Use(guard.Wrap)
+
+// -------------------------------------------------------------------------
+// ECHO FRAMEWORK
+// -------------------------------------------------------------------------
+e := echo.New()
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+
+e.Use(echo.WrapMiddleware(guard.Wrap))
+```
+
+---
+
+### D. PHP
+
+Install using **Composer**:
+```bash
+composer require phinehas/phinehas-php
+```
+
+---
+
+#### 1. Laravel 11+ Integration
+
+Publish the configuration file:
+```bash
+php artisan vendor:publish --tag=phinehas-config
+```
+
+```php
+// config/phinehas.php (Comprehensive Configuration Schema)
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Enforcement Action
+    |--------------------------------------------------------------------------
+    | 'sever':  Drops connection (HTTP 403 zero-byte body, terminates fastcgi)
+    | 'drop':   HTTP 403 Forbidden without diagnostic headers
+    | 'tarpit': Sleeps for tarpit_delay_ms before terminating
+    */
+    'action' => env('PHINEHAS_ACTION', 'sever'),
+
+    // [OPTIONAL - DEFAULT: 3] Strike threshold before temporary or permanent ban
+    'ban_threshold' => (int) env('PHINEHAS_BAN_THRESHOLD', 3),
+
+    // [OPTIONAL - DEFAULT: 86400 (24h)] Ban duration in seconds (0 = permanent)
+    'ban_duration_seconds' => (int) env('PHINEHAS_BAN_DURATION', 86400),
+
+    // [OPTIONAL - DEFAULT: 60] Rolling window in seconds
+    'strike_window_seconds' => (int) env('PHINEHAS_STRIKE_WINDOW', 60),
+
+    // [PRODUCTION RECOMMENDED - DEFAULT: false]
+    // Set to true when running behind Cloudflare or AWS ALB
+    'trust_proxy' => (bool) env('PHINEHAS_TRUST_PROXY', true),
+
+    // [OPTIONAL - DEFAULT: []] Additional regex traps
+    'custom_traps' => [
+        '/^\\/artisan-terminal/',
+        '/^\\/telescope\\/api/',
+    ],
+
+    // [OPTIONAL - DEFAULT: []] Whitelisted paths or IP addresses
+    'whitelist' => [
+        '127.0.0.1',
+        '/.well-known/apple-developer-merchantid-domain-association',
+    ],
+
+    // [PRODUCTION RECOMMENDED FOR MULTI-SERVER CLUSTERS]
+    // 'memory' (default in-process LRU) or 'redis'
+    'store' => env('PHINEHAS_STORE', 'redis'),
+    'redis' => [
+        'url' => env('REDIS_URL', 'redis://127.0.0.1:6379'),
+        'prefix' => 'phinehas:ban:',
+        'l1_ttl_seconds' => 5, // Local in-memory shield cache
+    ],
+
+    // [OPTIONAL - DEFAULT: 5000] Delay for tarpit mode
+    'tarpit_delay_ms' => 5000,
+];
+```
+
+Register the middleware in `bootstrap/app.php`:
 ```php
 // bootstrap/app.php
 use Illuminate\Foundation\Application;
@@ -166,6 +735,7 @@ use Phinehas\Laravel\PhinehasMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function ($middleware) {
+        // [REQUIRED] Prepend Phinehas to execute before authentication & session state
         $middleware->prepend(PhinehasMiddleware::class);
     })
     ->create();
@@ -173,7 +743,49 @@ return Application::configure(basePath: dirname(__DIR__))
 
 ---
 
-## 4. Threat Interception Lifecycle
+#### 2. Symfony Integration
+
+Register `PhinehasListener` as a kernel event listener:
+```yaml
+# config/services.yaml
+services:
+    Phinehas\Symfony\PhinehasListener:
+        arguments:
+            $config:
+                action: 'sever'             # [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+                ban_threshold: 3            # [OPTIONAL]
+                ban_duration_seconds: 86400 # [OPTIONAL]
+                trust_proxy: true           # [PRODUCTION RECOMMENDED]
+                custom_traps:               # [OPTIONAL]
+                    - '/^\\/app_dev\\.php/'
+        tags:
+            - { name: kernel.event_listener, event: kernel.request, priority: 4096 }
+```
+
+---
+
+## 4. Master Configuration Dictionary
+
+The following table provides the cross-ecosystem translation of every Phinehas configuration option:
+
+| Option (JS / Go) | Option (Python / PHP) | Type | Default | Status | Detailed Purpose & Production Guidance |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `action` | `action` | `string` | `"sever"` | Optional | Enforcement mode: `"sever"` (kill TCP socket), `"drop"` (HTTP 403), or `"tarpit"` (crawler delay). |
+| `banThreshold` | `ban_threshold` | `int` | `3` | Optional | Number of malicious reconnaissance attempts before IP is banned across the cluster. |
+| `banDurationSeconds` | `ban_duration_seconds` | `int` | `86400` | Optional | IP ban duration in seconds (`86400` = 24 hours). Set to `0` for permanent bans. |
+| `strikeWindowSeconds` | `strike_window_seconds` | `int` | `60` | Optional | Rolling window in seconds during which strikes accumulate toward `banThreshold`. |
+| `trustProxy` | `trust_proxy` | `bool` | `false` | **Production** | Inspects `CF-Connecting-IP`, `True-Client-IP`, `X-Forwarded-For`. Must be `true` behind CDNs. |
+| `proxyDepth` | `proxy_depth` | `int` | `1` | Optional | Number of trusted reverse proxy hops in `X-Forwarded-For` chain. |
+| `customTraps` | `custom_traps` | `list` | `[]` | Optional | Custom regex patterns or literal paths classified as malicious (e.g. proprietary admin APIs). |
+| `excludeDefaultTraps` | `exclude_default_traps` | `bool` | `false` | Optional | Disables built-in database/CMS/debugger trap list, evaluating only custom traps and dotfiles. |
+| `whitelist` | `whitelist` | `list` | `[]` | Optional | CIDR blocks (`10.0.0.0/8`) or exact paths unconditionally exempted from threat evaluation. |
+| `store` | `store` | `Store` | `Memory` | **Production** | In-memory $O(1)$ LRU (default) or distributed multi-node Redis with L1 read shielding. |
+| `tarpitDelayMs` | `tarpit_delay_ms` | `int` | `5000` | Optional | Sleep delay in milliseconds before connection termination when `action: "tarpit"`. |
+| `onStrike` / `logger` | `on_strike` / `logger` | `func` | `Stdout` | Optional | Custom structured logger / telemetry dispatcher for Datadog, Prometheus, or ELK. |
+
+---
+
+## 5. Threat Interception Lifecycle
 
 Phinehas executes in $O(1)$ constant time on every incoming HTTP request:
 
@@ -210,7 +822,7 @@ Phinehas executes in $O(1)$ constant time on every incoming HTTP request:
 
 ---
 
-## 5. Shared Compliance Test Suite (`compliance/`)
+## 6. Shared Compliance Test Suite (`compliance/`)
 
 All SDK implementations are strictly verified against canonical, language-agnostic JSON test vectors located in [`compliance/`](compliance/):
 
@@ -233,23 +845,6 @@ cd packages/go && go test -v ./... && cd ../..
 # 4. PHP Test Suite (7 tests)
 php packages/php/tests/run.php
 ```
-
----
-
-## 6. Action Modes & Configuration
-
-Every SDK supports identical configuration parameters:
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `action` | `string` | `"sever"` | Enforcement mode: `"sever"` (kill TCP socket), `"drop"` (HTTP 403), or `"tarpit"` (artificial delay). |
-| `banThreshold` | `number` | `3` | Number of malicious strikes within window before IP is banned. |
-| `banDurationSeconds`| `number` | `86400` | Duration of the IP ban in seconds (default: 24 hours). `0` = permanent. |
-| `strikeWindowSeconds`| `number`| `60` | Time window in seconds during which strikes accumulate. |
-| `customTraps` | `string[]`| `[]` | Additional regex patterns or literal paths to classify as malicious. |
-| `whitelist` | `string[]`| `[]` | Exact paths or CIDR blocks exempt from threat evaluation. |
-| `trustProxy` | `boolean` | `false` | When behind a reverse proxy/CDN, trusts `CF-Connecting-IP`, `X-Forwarded-For`, etc. |
-| `tarpitDelayMs` | `number` | `5000` | Delay in milliseconds applied when `action: "tarpit"`. |
 
 ---
 
