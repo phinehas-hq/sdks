@@ -40,6 +40,12 @@ fastapi = [
     "fastapi[standard]>=0.110.0",
     "starlette>=0.36.0"
 ]
+django = [
+    "django>=4.2.0"
+]
+flask = [
+    "flask>=3.0.0"
+]
 redis = [
     "redis>=5.0.0"
 ]
