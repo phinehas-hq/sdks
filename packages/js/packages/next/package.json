@@ -1,6 +1,7 @@
 {
   "name": "@phinehas/next",
   "version": "1.0.0",
+  "type": "module",
   "description": "Phinehas Edge & Server guard middleware for Next.js applications",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -13,7 +14,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test": "node --test tests/*.test.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
