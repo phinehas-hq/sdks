@@ -88,6 +88,15 @@ r.Use(func(c *gin.Context) {
 })
 ```
 
+### Echo Framework
+
+```go
+e := echo.New()
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionTerminate})
+
+e.Use(echo.WrapMiddleware(guard.Wrap))
+```
+
 ---
 
 ## Configuration Options
