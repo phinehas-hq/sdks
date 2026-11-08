@@ -123,12 +123,12 @@ const app = express();
 // =========================================================================
 app.use(
   phinehas({
-    // [OPTIONAL - DEFAULT: "sever"]
+    // [OPTIONAL - DEFAULT: "terminate"]
     // Enforcement action on detection:
-    // - "sever":  Destroys underlying TCP socket immediately (ECONNRESET)
-    // - "drop":   Returns HTTP 403 Forbidden with zero response body bytes
+    // - "terminate": Destroys underlying TCP socket immediately (ECONNRESET)
+    // - "reject":    Returns HTTP 403 Forbidden with zero response body bytes
     // - "tarpit": Holds attacker socket open for `tarpitDelayMs` to starve crawler
-    action: 'sever',
+    action: 'terminate',
 
     // [OPTIONAL - DEFAULT: 3]
     // Number of malicious reconnaissance attempts before an IP is banned
@@ -227,7 +227,7 @@ import { createPhinehasEdgeGuard } from '@phinehas/next';
 const phinehasGuard = createPhinehasEdgeGuard({
   // [OPTIONAL - DEFAULT: "drop"]
   // In V8 edge isolates, "drop" immediately returns a zero-byte 403 Forbidden
-  action: 'drop',
+  action: 'reject',
 
   // [OPTIONAL - DEFAULT: 3]
   banThreshold: 3,
@@ -281,7 +281,7 @@ import { PhinehasModule, PhinehasMiddleware } from '@phinehas/nestjs';
     // OPTION 1: STATIC REGISTRATION (PhinehasModule.forRoot)
     // =========================================================================
     PhinehasModule.forRoot({
-      action: 'sever',             // [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+      action: 'terminate',         // [OPTIONAL] 'terminate' | 'reject' | 'tarpit'
       banThreshold: 3,             // [OPTIONAL] Strikes before IP ban
       banDurationSeconds: 86400,   // [OPTIONAL] 24-hour ban
       trustProxy: true,            // [PRODUCTION RECOMMENDED]
@@ -295,7 +295,7 @@ import { PhinehasModule, PhinehasMiddleware } from '@phinehas/nestjs';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        action: config.get('PHINEHAS_ACTION', 'sever'),
+        action: config.get('PHINEHAS_ACTION', 'terminate'),
         banThreshold: config.get<number>('PHINEHAS_BAN_THRESHOLD', 3),
         trustProxy: config.get<boolean>('TRUST_PROXY', true),
       }),
@@ -343,11 +343,11 @@ app = FastAPI(title="Production Service")
 # =========================================================================
 app.add_middleware(
     PhinehasMiddleware,
-    # [OPTIONAL - DEFAULT: "sever"]
-    # "sever":  Immediately terminates the ASGI transport socket
-    # "drop":   Returns HTTP 403 Forbidden with empty response body
+    # [OPTIONAL - DEFAULT: "terminate"]
+    # "terminate": Immediately terminates the ASGI transport socket
+    # "reject":    Returns HTTP 403 Forbidden with empty response body
     # "tarpit": Delays the response before dropping to exhaust crawlers
-    action="sever",
+    action="terminate",
 
     # [OPTIONAL - DEFAULT: 3]
     # Number of strike events before the client IP is banned
@@ -425,8 +425,8 @@ MIDDLEWARE = [
 # PHINEHAS CONFIGURATION DICTIONARY (Required vs Optional)
 # =========================================================================
 PHINEHAS = {
-    # [OPTIONAL - DEFAULT: 'sever']
-    'ACTION': 'sever',
+    # [OPTIONAL - DEFAULT: 'terminate']
+    'ACTION': 'terminate',
 
     # [OPTIONAL - DEFAULT: 3]
     'BAN_THRESHOLD': 3,
@@ -479,7 +479,7 @@ app = Flask(__name__)
 # FLASK CONFIGURATION (Can be loaded from config object or environment)
 # =========================================================================
 app.config.update(
-    PHINEHAS_ACTION="sever",             # [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+    PHINEHAS_ACTION="terminate",         # [OPTIONAL] 'terminate' | 'reject' | 'tarpit'
     PHINEHAS_BAN_THRESHOLD=3,            # [OPTIONAL] Strikes before IP ban
     PHINEHAS_BAN_DURATION_SECONDS=86400, # [OPTIONAL] 24-hour ban
     PHINEHAS_TRUST_PROXY=True,           # [PRODUCTION RECOMMENDED]
@@ -513,7 +513,7 @@ from phinehas.wsgi import PhinehasWSGIMiddleware
 # [REQUIRED] Wrap your application
 application = PhinehasWSGIMiddleware(
     app,
-    action="sever",              # [OPTIONAL - DEFAULT: 'sever']
+    action="terminate",              # [OPTIONAL - DEFAULT: 'terminate']
     ban_threshold=3,             # [OPTIONAL - DEFAULT: 3]
     ban_duration_seconds=86400,  # [OPTIONAL - DEFAULT: 86400]
     trust_proxy=True,            # [PRODUCTION RECOMMENDED]
@@ -556,11 +556,11 @@ func main() {
 	// PHINEHAS CONFIGURATION (Required vs Optional)
 	// =====================================================================
 	cfg := phinehas.Config{
-		// [OPTIONAL - DEFAULT: ActionSever]
-		// ActionSever:  Hijacks connection via http.Hijacker and closes TCP socket
-		// ActionDrop:   Returns HTTP 403 Forbidden with empty body
+		// [OPTIONAL - DEFAULT: ActionTerminate]
+		// ActionTerminate: Hijacks connection via http.Hijacker and closes TCP socket
+		// ActionReject:    Returns HTTP 403 Forbidden with empty body
 		// ActionTarpit: Sleeps for TarpitDelayMs before severing socket
-		Action: phinehas.ActionSever,
+		Action: phinehas.ActionTerminate,
 
 		// [OPTIONAL - DEFAULT: 3]
 		// Strikes before client IP is banned
@@ -632,7 +632,7 @@ func main() {
 // GIN FRAMEWORK
 // -------------------------------------------------------------------------
 r := gin.Default()
-guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionTerminate, TrustProxy: true})
 
 r.Use(func(c *gin.Context) {
     guard.Wrap(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -644,7 +644,7 @@ r.Use(func(c *gin.Context) {
 // CHI ROUTER
 // -------------------------------------------------------------------------
 r := chi.NewRouter()
-guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionTerminate, TrustProxy: true})
 
 r.Use(guard.Wrap)
 
@@ -652,7 +652,7 @@ r.Use(guard.Wrap)
 // ECHO FRAMEWORK
 // -------------------------------------------------------------------------
 e := echo.New()
-guard := phinehas.New(phinehas.Config{Action: phinehas.ActionSever, TrustProxy: true})
+guard := phinehas.New(phinehas.Config{Action: phinehas.ActionTerminate, TrustProxy: true})
 
 e.Use(echo.WrapMiddleware(guard.Wrap))
 ```
@@ -682,11 +682,11 @@ return [
     |--------------------------------------------------------------------------
     | Enforcement Action
     |--------------------------------------------------------------------------
-    | 'sever':  Drops connection (HTTP 403 zero-byte body, terminates fastcgi)
-    | 'drop':   HTTP 403 Forbidden without diagnostic headers
+    | 'terminate': Forcefully exits script execution immediately
+    | 'reject':    HTTP 403 Forbidden without diagnostic headers
     | 'tarpit': Sleeps for tarpit_delay_ms before terminating
     */
-    'action' => env('PHINEHAS_ACTION', 'sever'),
+    'action' => env('PHINEHAS_ACTION', 'terminate'),
 
     // [OPTIONAL - DEFAULT: 3] Strike threshold before temporary or permanent ban
     'ban_threshold' => (int) env('PHINEHAS_BAN_THRESHOLD', 3),
@@ -752,7 +752,7 @@ services:
     Phinehas\Symfony\PhinehasListener:
         arguments:
             $config:
-                action: 'sever'             # [OPTIONAL] 'sever' | 'drop' | 'tarpit'
+                action: 'terminate'         # [OPTIONAL] 'terminate' | 'reject' | 'tarpit'
                 ban_threshold: 3            # [OPTIONAL]
                 ban_duration_seconds: 86400 # [OPTIONAL]
                 trust_proxy: true           # [PRODUCTION RECOMMENDED]
@@ -770,7 +770,7 @@ The following table provides the cross-ecosystem translation of every Phinehas c
 
 | Option (JS / Go) | Option (Python / PHP) | Type | Default | Status | Detailed Purpose & Production Guidance |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `action` | `action` | `string` | `"sever"` | Optional | Enforcement mode: `"sever"` (kill TCP socket), `"drop"` (HTTP 403), or `"tarpit"` (crawler delay). |
+| `action` | `action` | `string` | `"terminate"` | Optional | Enforcement mode: `"terminate"` (kill TCP socket), `"reject"` (HTTP 403), or `"tarpit"` (crawler delay). |
 | `banThreshold` | `ban_threshold` | `int` | `3` | Optional | Number of malicious reconnaissance attempts before IP is banned across the cluster. |
 | `banDurationSeconds` | `ban_duration_seconds` | `int` | `86400` | Optional | IP ban duration in seconds (`86400` = 24 hours). Set to `0` for permanent bans. |
 | `strikeWindowSeconds` | `strike_window_seconds` | `int` | `60` | Optional | Rolling window in seconds during which strikes accumulate toward `banThreshold`. |
@@ -813,8 +813,8 @@ Phinehas executes in $O(1)$ constant time on every incoming HTTP request:
                                            v
 +----------------------------------------------------------------------------------------+
 | STAGE 4: Enforcement & Action Dispatch                                                 |
-| - Action "sever": Abrupt TCP RST (zero bytes, zero headers)                            |
-| - Action "drop":  HTTP 403 Forbidden without headers or body bytes                     |
+| - Action "terminate": Abrupt TCP RST (zero bytes, zero headers)                        |
+| - Action "reject":  HTTP 403 Forbidden without headers or body bytes                     |
 | - Action "tarpit": Holds attacker socket open for 5 seconds, exhausting bot worker     |
 | - Strike Count >= banThreshold -> IP banned across cluster                             |
 +----------------------------------------------------------------------------------------+
