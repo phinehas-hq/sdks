@@ -1,0 +1,130 @@
+{
+  "description": "RFC 8615 Wildcard Rule Test Vectors (^/\\.(?!well-known(/|$))[a-zA-Z0-9_\\-\\.]+)",
+  "cases": [
+    {
+      "path": "/.env",
+      "expected_strike": true,
+      "reason": "Root environment file"
+    },
+    {
+      "path": "/.env.local",
+      "expected_strike": true,
+      "reason": "Local environment overrides"
+    },
+    {
+      "path": "/.env.production",
+      "expected_strike": true,
+      "reason": "Production environment credentials"
+    },
+    {
+      "path": "/.env.bak",
+      "expected_strike": true,
+      "reason": "Environment backup file"
+    },
+    {
+      "path": "/.git",
+      "expected_strike": true,
+      "reason": "Git repository root directory"
+    },
+    {
+      "path": "/.git/HEAD",
+      "expected_strike": true,
+      "reason": "Git HEAD ref file"
+    },
+    {
+      "path": "/.git/config",
+      "expected_strike": true,
+      "reason": "Git repository configuration"
+    },
+    {
+      "path": "/.gitignore",
+      "expected_strike": true,
+      "reason": "Git ignore patterns"
+    },
+    {
+      "path": "/.aws/credentials",
+      "expected_strike": true,
+      "reason": "AWS cloud credentials file"
+    },
+    {
+      "path": "/.aws/config",
+      "expected_strike": true,
+      "reason": "AWS CLI config"
+    },
+    {
+      "path": "/.docker/config.json",
+      "expected_strike": true,
+      "reason": "Docker auth & credentials registry"
+    },
+    {
+      "path": "/.kube/config",
+      "expected_strike": true,
+      "reason": "Kubernetes cluster config & tokens"
+    },
+    {
+      "path": "/.ssh/id_rsa",
+      "expected_strike": true,
+      "reason": "SSH private key"
+    },
+    {
+      "path": "/.ssh/authorized_keys",
+      "expected_strike": true,
+      "reason": "SSH authorized keys file"
+    },
+    {
+      "path": "/.DS_Store",
+      "expected_strike": true,
+      "reason": "macOS metadata file"
+    },
+    {
+      "path": "/.vscode/settings.json",
+      "expected_strike": true,
+      "reason": "VS Code IDE workspace config"
+    },
+    {
+      "path": "/.idea/workspace.xml",
+      "expected_strike": true,
+      "reason": "IntelliJ / JetBrains IDE workspace"
+    },
+    {
+      "path": "/.svn/entries",
+      "expected_strike": true,
+      "reason": "Subversion repository metadata"
+    },
+    {
+      "path": "/.hg",
+      "expected_strike": true,
+      "reason": "Mercurial version control"
+    },
+    {
+      "path": "/.well-known/acme-challenge/test-challenge-token-12345",
+      "expected_strike": false,
+      "reason": "RFC 8615: Automated SSL/TLS issuance (Let's Encrypt)"
+    },
+    {
+      "path": "/.well-known/openid-configuration",
+      "expected_strike": false,
+      "reason": "RFC 8615: OIDC Discovery endpoint"
+    },
+    {
+      "path": "/.well-known/jwks.json",
+      "expected_strike": false,
+      "reason": "RFC 8615: Public JWT cryptographic verification keys"
+    },
+    {
+      "path": "/.well-known/apple-app-site-association",
+      "expected_strike": false,
+      "reason": "RFC 8615: Apple Universal Links verification"
+    },
+    {
+      "path": "/.well-known/assetlinks.json",
+      "expected_strike": false,
+      "reason": "RFC 8615: Android App Links verification"
+    },
+    {
+      "path": "/.well-known/security.txt",
+      "expected_strike": false,
+      "reason": "RFC 8615: Vulnerability disclosure contact details"
+    }
+  ]
+}

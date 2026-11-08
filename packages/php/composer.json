@@ -1,0 +1,23 @@
+{
+  "name": "phinehas/phinehas-php",
+  "description": "Active defense security middleware for PHP / Laravel",
+  "type": "library",
+  "license": "Apache-2.0",
+  "authors": [
+    {
+      "name": "Phinehas HQ",
+      "email": "security@phinehas.dev"
+    }
+  ],
+  "require": {
+    "php": "^8.2"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Phinehas\\": "src/"
+    }
+  }
+}

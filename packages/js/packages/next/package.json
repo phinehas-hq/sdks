@@ -1,0 +1,37 @@
+{
+  "name": "@phinehas/next",
+  "version": "1.0.0",
+  "description": "Phinehas Edge & Server guard middleware for Next.js applications",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@phinehas/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0"
+  },
+  "keywords": [
+    "nextjs",
+    "edge",
+    "middleware",
+    "security",
+    "honeypot"
+  ],
+  "author": "Phinehas HQ",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

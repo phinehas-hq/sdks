@@ -1,0 +1,29 @@
+{
+  "description": "Explicit Non-Dot Traps Registry",
+  "traps": [
+    "/wp-login.php",
+    "/wp-admin",
+    "/xmlrpc.php",
+    "/wp-config.php",
+    "/administrator",
+    "/user/login",
+    "/phpmyadmin",
+    "/pma",
+    "/adminer.php",
+    "/mysql",
+    "/dbadmin",
+    "/_ignition/execute-solution",
+    "/__debug__",
+    "/actuator",
+    "/actuator/env",
+    "/actuator/health",
+    "/telescope",
+    "/elmah.axd",
+    "/dump.sql",
+    "/backup.sql",
+    "/database.sql",
+    "/db.sqlite3",
+    "/backup.tar.gz",
+    "/backup.zip"
+  ]
+}

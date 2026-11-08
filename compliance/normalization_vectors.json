@@ -1,0 +1,68 @@
+{
+  "description": "Anti-Bypass Path Normalization Pipeline Test Vectors",
+  "pipeline_steps": [
+    "URL Decoding (%2e, %2f, %5c, hex)",
+    "Backslash Conversion (\\ -> /)",
+    "Slash Collapsing (// -> /)",
+    "Path Traversal Resolution (../../)",
+    "Lowercasing",
+    "Trailing Slash Removal"
+  ],
+  "cases": [
+    {
+      "raw_input": "/%2eenv",
+      "expected_normalized": "/.env",
+      "description": "Hex-encoded dot %2e evasion"
+    },
+    {
+      "raw_input": "/%2E%65%6E%76",
+      "expected_normalized": "/.env",
+      "description": "Full hex encoding of .env"
+    },
+    {
+      "raw_input": "\\.env",
+      "expected_normalized": "/.env",
+      "description": "Windows backslash prefix evasion"
+    },
+    {
+      "raw_input": "\\\\wp-admin\\",
+      "expected_normalized": "/wp-admin",
+      "description": "Double backslash and trailing backslash"
+    },
+    {
+      "raw_input": "/////.env",
+      "expected_normalized": "/.env",
+      "description": "Sequential slash collapsing"
+    },
+    {
+      "raw_input": "/api/v1/../../.env",
+      "expected_normalized": "/.env",
+      "description": "Relative directory traversal to dotfile"
+    },
+    {
+      "raw_input": "/public/assets/../../wp-login.php",
+      "expected_normalized": "/wp-login.php",
+      "description": "Directory traversal to CMS console"
+    },
+    {
+      "raw_input": "/.EnV.Production",
+      "expected_normalized": "/.env.production",
+      "description": "Mixed case normalization"
+    },
+    {
+      "raw_input": "/Wp-Admin/",
+      "expected_normalized": "/wp-admin",
+      "description": "Case normalization with trailing slash removal"
+    },
+    {
+      "raw_input": "///.well-known//jwks.json/",
+      "expected_normalized": "/.well-known/jwks.json",
+      "description": "Redundant slashes in RFC 8615 allowed path"
+    },
+    {
+      "raw_input": "/api/%2e%2e/%2e%2e/.git/HEAD",
+      "expected_normalized": "/.git/head",
+      "description": "Hex-encoded directory traversal to git metadata"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Node.js
+node_modules/
+dist/
+.yarn/cache/
+.yarn/build-state.yml
+.pnp.*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Go
+bin/
+*.exe
+*.out
+vendor/
+
+# PHP
+vendor/
+.phpunit.result.cache
+
+# Environment & IDE
+.env*
+!.env.example
+.idea/
+.vscode/
+*.swp
+*.log

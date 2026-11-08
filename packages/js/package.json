@@ -1,0 +1,15 @@
+{
+  "name": "@phinehas/monorepo",
+  "private": true,
+  "description": "Phinehas JavaScript & TypeScript SDKs Monorepo",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach -pt run build",
+    "test": "yarn workspaces foreach -pt run test",
+    "lint": "yarn workspaces foreach -pt run lint",
+    "clean": "yarn workspaces foreach -pt run clean"
+  },
+  "packageManager": "yarn@4.6.0"
+}

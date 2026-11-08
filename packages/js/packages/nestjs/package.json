@@ -1,0 +1,37 @@
+{
+  "name": "@phinehas/nestjs",
+  "version": "1.0.0",
+  "description": "Phinehas active defense middleware module for NestJS applications",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@phinehas/core": "workspace:*",
+    "@phinehas/node": "workspace:*"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0 || ^11.0.0"
+  },
+  "keywords": [
+    "nestjs",
+    "security",
+    "middleware",
+    "active-defense"
+  ],
+  "author": "Phinehas HQ",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

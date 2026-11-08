@@ -1,0 +1,32 @@
+{
+  "name": "@phinehas/core",
+  "version": "1.0.0",
+  "description": "Core RFC 8615 detection engine, path normalizer, and BanStore state management for Phinehas",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "security",
+    "middleware",
+    "waf",
+    "active-defense",
+    "rfc8615",
+    "bot-defense"
+  ],
+  "author": "Phinehas HQ",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
