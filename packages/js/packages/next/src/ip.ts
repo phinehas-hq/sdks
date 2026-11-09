@@ -3,7 +3,7 @@
  * Compatible with Vercel Edge, Cloudflare Workers, and Node.js Next.js Middleware.
  */
 
-import type { ProxyOptions } from '../../core/src/index.ts';
+import type { ProxyOptions } from '@phinehas/core';
 
 export interface EdgeRequestLike {
   ip?: string;

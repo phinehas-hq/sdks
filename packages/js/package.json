@@ -6,10 +6,13 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspaces foreach -pt run build",
-    "test": "yarn workspaces foreach -pt run test",
-    "lint": "yarn workspaces foreach -pt run lint",
-    "clean": "yarn workspaces foreach -pt run clean"
+    "build": "yarn --cwd packages/core build && yarn --cwd packages/node build && yarn --cwd packages/next build && yarn --cwd packages/nestjs build",
+    "test": "yarn --cwd packages/core test && yarn --cwd packages/node test && yarn --cwd packages/next test && yarn --cwd packages/nestjs test",
+    "clean": "yarn --cwd packages/core clean && yarn --cwd packages/node clean && yarn --cwd packages/next clean && yarn --cwd packages/nestjs clean",
+    "link:all": "yarn --cwd packages/core link && yarn --cwd packages/node link && yarn --cwd packages/next link && yarn --cwd packages/nestjs link"
   },
-  "packageManager": "yarn@4.6.0"
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^7.0.2"
+  }
 }

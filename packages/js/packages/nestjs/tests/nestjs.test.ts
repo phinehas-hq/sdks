@@ -98,7 +98,10 @@ test('NestJS Module: Dynamic forRoot registration', () => {
 });
 
 test('NestJS Module: Dynamic forRootAsync registration', async () => {
+  class DummyConfigModule {}
+
   const dynamicModule = PhinehasModule.forRootAsync({
+    imports: [DummyConfigModule],
     useFactory: async () => ({
       action: 'terminate',
       storage: { driver: 'memory', ttl: 7200 }
@@ -106,6 +109,7 @@ test('NestJS Module: Dynamic forRootAsync registration', async () => {
   });
 
   assert.strictEqual(dynamicModule.global, true);
+  assert.deepStrictEqual(dynamicModule.imports, [DummyConfigModule]);
   const optionsProvider = dynamicModule.providers?.find((p) => p.provide === PHINEHAS_OPTIONS);
   assert.ok(optionsProvider);
   assert.ok(typeof optionsProvider.useFactory === 'function');

@@ -27,4 +27,4 @@ export type {
   ProxyOptions,
   LoggingOptions,
   RuleMatched
-} from '../../core/src/index.ts';
+} from '@phinehas/core';

@@ -2,18 +2,20 @@
  * Phinehas NestJS Dynamic Module
  */
 
-import type { PhinehasOptions } from '../../core/src/index.ts';
+import type { PhinehasOptions } from '@phinehas/core';
 import { PHINEHAS_OPTIONS } from './constants.ts';
 import { PhinehasMiddleware } from './middleware.ts';
 
 export interface DynamicModuleLike {
   module: any;
+  imports?: any[];
   providers?: any[];
   exports?: any[];
   global?: boolean;
 }
 
 export interface PhinehasModuleAsyncOptions {
+  imports?: any[];
   useFactory: (...args: any[]) => Promise<PhinehasOptions> | PhinehasOptions;
   inject?: any[];
 }
@@ -48,6 +50,7 @@ export class PhinehasModule {
     return {
       module: PhinehasModule,
       global: true,
+      ...(asyncOptions.imports ? { imports: asyncOptions.imports } : {}),
       providers: [
         {
           provide: PHINEHAS_OPTIONS,

@@ -12,7 +12,7 @@ import {
   type PhinehasOptions,
   type BanStore,
   type StrikeEvent
-} from '../../core/src/index.ts';
+} from '@phinehas/core';
 import { extractClientIp, isIpAllowed } from './ip.ts';
 import { executeAction } from './actions.ts';
 
@@ -31,7 +31,7 @@ export function phinehas(options?: PhinehasOptions): PhinehasMiddleware {
   const evaluator = new ThreatEvaluator(options?.honeypots);
   const logger = new PhinehasLogger(options?.logging);
   const action = options?.action ?? 'terminate';
-  const allowList = options?.allowList ?? ['127.0.0.1', '::1'];
+  const allowList = options?.allowList ?? [];
   const banTtl = options?.storage?.ttl !== undefined ? options.storage.ttl : 3600;
 
   // Initialize storage layer

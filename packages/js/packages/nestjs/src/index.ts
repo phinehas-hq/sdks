@@ -17,4 +17,4 @@ export type {
   HoneypotsOptions,
   ProxyOptions,
   LoggingOptions
-} from '../../core/src/index.ts';
+} from '@phinehas/core';

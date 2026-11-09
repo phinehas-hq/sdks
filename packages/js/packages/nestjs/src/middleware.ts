@@ -3,8 +3,8 @@
  * Specification: Section 5.2
  */
 
-import { phinehas, type PhinehasMiddleware as NodeMiddleware } from '../../node/src/index.ts';
-import type { PhinehasOptions } from '../../core/src/index.ts';
+import { phinehas, type PhinehasMiddleware as NodeMiddleware } from '@phinehas/node';
+import type { PhinehasOptions } from '@phinehas/core';
 
 export interface NestMiddlewareLike {
   use(req: any, res: any, next: (error?: any) => void): any;

@@ -12,7 +12,7 @@ import {
   type BanStore,
   type StrikeEvent,
   type RuleMatched
-} from '../../core/src/index.ts';
+} from '@phinehas/core';
 import { extractEdgeClientIp, isIpAllowed, type EdgeRequestLike } from './ip.ts';
 
 export interface PhinehasEdgeResult {
