@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 authors = [
-    { name = "Phinehas HQ", email = "security@phinehas.dev" }
+    { name = "cleave3", email = "security@phinehas.dev" }
 ]
 keywords = [
     "security",

@@ -5,10 +5,11 @@
   "license": "Apache-2.0",
   "authors": [
     {
-      "name": "Phinehas HQ",
-      "email": "security@phinehas.dev"
+      "name": "cleave3",
+      "homepage": "https://github.com/cleave3"
     }
   ],
+  "homepage": "https://phinehas.dev/packages/php",
   "require": {
     "php": "^8.2"
   },

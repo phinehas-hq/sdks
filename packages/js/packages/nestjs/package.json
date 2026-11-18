@@ -36,7 +36,16 @@
     "middleware",
     "active-defense"
   ],
-  "author": "Phinehas HQ",
+  "author": {
+    "name": "cleave3",
+    "url": "https://github.com/cleave3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phinehas-hq/sdks.git",
+    "directory": "packages/js/packages/nestjs"
+  },
+  "homepage": "https://phinehas.dev/packages/node",
   "license": "Apache-2.0",
   "publishConfig": {
     "access": "public"
